@@ -25,14 +25,14 @@ import zio.{ Has, UIO, URLayer, ZLayer }
 
 object MockClock {
 
-  sealed trait Tag[I, A] extends Method[Clock, I, A] {
+  sealed trait Tag[I, E, A] extends Method[Clock, I, E, A] {
     def envBuilder = MockClock.envBuilder
   }
 
-  object CurrentTime     extends Tag[TimeUnit, Long]
-  object CurrentDateTime extends Tag[Unit, OffsetDateTime]
-  object NanoTime        extends Tag[Unit, Long]
-  object Sleep           extends Tag[Duration, Unit]
+  object CurrentTime     extends Tag[TimeUnit, Nothing, Long]
+  object CurrentDateTime extends Tag[Unit, Nothing, OffsetDateTime]
+  object NanoTime        extends Tag[Unit, Nothing, Long]
+  object Sleep           extends Tag[Duration, Nothing, Unit]
 
   private lazy val envBuilder: URLayer[Has[Proxy], Clock] =
     ZLayer.fromService(invoke =>

@@ -258,7 +258,19 @@ object MockSpec extends ZIOBaseSpec with MockSpecUtils {
           Module.looped(1),
           isNone
         )
-      )
+      )/*,
+      suite("constant")(
+        testSpec("returns value")(
+          ModuleMock.Constant returns value("foo"),
+          Module.constant,
+          equalTo("foo")
+        ),
+        testSpecDied("returns failure")(
+          ModuleMock.Constant returns failure(new Exception("foo")),
+          Module.constant,
+          isSubtype[Exception](hasMessage(equalTo("foo")))
+        )
+      )*/
     ),
     suite("assertions composition")(
       testSpec("&&")(
@@ -332,8 +344,8 @@ object MockSpec extends ZIOBaseSpec with MockSpecUtils {
           )
         )
       }, {
-        type M = Method[Module, (Int, String, Long), String]
-        type X = UnexpectedCallExpection[Module, (Int, String, Long), String]
+        type M = Method[Module, (Int, String, Long), String, String]
+        type X = UnexpectedCallExpection[Module, (Int, String, Long), String, String]
 
         testSpecDied("unexpected call")(
           ModuleMock.SingleParam(equalTo(1)) returns value("foo"),

@@ -35,10 +35,10 @@ object MockAdvancedSpec extends ZIOBaseSpec with MockSpecUtils {
     )
   }
 
-  def hasUnexpectedCall[I, A](method: Method[Module, I, A], args: I): Assertion[Throwable] =
-    isSubtype[UnexpectedCallExpection[Module, I, A]](
-      hasField[UnexpectedCallExpection[Module, I, A], Method[Module, I, A]]("method", _.method, equalTo(method)) &&
-        hasField[UnexpectedCallExpection[Module, I, A], Any]("args", _.args, equalTo(args))
+  def hasUnexpectedCall[I, E, A](method: Method[Module, I, E, A], args: I): Assertion[Throwable] =
+    isSubtype[UnexpectedCallExpection[Module, I, E, A]](
+      hasField[UnexpectedCallExpection[Module, I, E, A], Method[Module, I, E, A]]("method", _.method, equalTo(method)) &&
+        hasField[UnexpectedCallExpection[Module, I, E, A], Any]("args", _.args, equalTo(args))
     )
 
   def hasUnsatisfiedExpectations: Assertion[Throwable] =

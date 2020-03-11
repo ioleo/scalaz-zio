@@ -31,9 +31,9 @@ object ProxyFactory {
    */
   def mockProxy[R <: Has[_]: Tagged](state: State[R]): ULayer[Has[Proxy]] =
     ZLayer.succeed(new Proxy {
-      def invoke[RIn <: Has[_], ROut, I, E, A](invokedMethod: Method[RIn, I, A], args: I): ZIO[ROut, E, A] = {
+      def invoke[RIn <: Has[_], ROut, I, E, A](invokedMethod: Method[RIn, I, E, A], args: I): ZIO[ROut, E, A] = {
 
-        def findMatching(scopes: List[Scope[R]]): UIO[Matched[R, E, A]] =
+        def findMatching(scopes: List[Scope[R]]): UIO[Matched[R, E, A]] = {
           scopes match {
             case Nil => ZIO.die(UnexpectedCallExpection(invokedMethod, args))
             case Scope(expectation, id, update) :: nextScopes =>
@@ -180,7 +180,7 @@ object ProxyFactory {
                   findMatching(scope :: nextScopes)
               }
           }
-
+        }
         def handleLeafFailure(failure: => InvalidCall, nextScopes: List[Scope[R]]): UIO[Matched[R, E, A]] =
           state.failedMatchesRef
             .updateAndGet(failure :: _)

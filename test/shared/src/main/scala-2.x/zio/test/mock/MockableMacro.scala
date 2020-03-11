@@ -60,12 +60,12 @@ private[mock] object MockableMacro {
           if (typeList.size > 22) abort(s"Unable to generate tag for method $name with more than 22 arguments.")
           tq"(..$typeList)"
         }
-      val outputType = symbol.returnType match {
-        case zio(_, _, a) => a
-        case a            => a
+      val (errorType: Type, successType: Type) = symbol.returnType match {
+        case zio(_, e, a) => e -> a
+        case a            => tq"Throwable" -> a
       }
 
-      q"case object $tagName extends Tag[$inputType, $outputType]"
+      q"case object $tagName extends tag[$inputType, $errorType, $successType]"
     }
 
     def makeMock(name: TermName, symbol: MethodSymbol, overloadIndex: Option[TermName]): Tree = {
@@ -85,14 +85,18 @@ private[mock] object MockableMacro {
         else Modifiers(Flag.FINAL | Flag.OVERRIDE)
 
       val returnType = tq"_root_.zio.ZIO[$r, $e, $a]"
-      val returnValue =
-        symbol.paramLists match {
+      val returnValue = {
+        val proxy = symbol.paramLists match {
           case argLists if argLists.flatten.nonEmpty =>
             val argNames = argLists.flatten.map(_.name)
-            q"invoke($tag, ..$argNames)"
+            q"proxy($tag, ..$argNames)"
           case _ =>
-            q"invoke($tag)"
+            q"proxy($tag)"
         }
+
+        if (isZio) proxy
+        else "rts.unsafeRunTask($proxy)"
+      }
 
       if (symbol.isVal || symbol.isVar) q"$mods val $name: $returnType = $returnValue"
       else
@@ -151,18 +155,20 @@ private[mock] object MockableMacro {
     val result =
       q"""
         object $mockName {
-          sealed trait Tag[I, A] extends _root_.zio.test.mock.Method[$envType, I, A] {
+          sealed trait tag[I, E, A] extends _root_.zio.test.mock.Method[$envType, I, E, A] {
             def envBuilder: $envBuilderType = $mockName.envBuilder
           }
 
           ..$tags
 
           private lazy val envBuilder: $envBuilderType =
-            _root_.zio.ZLayer.fromService(invoke =>
-              new $serviceType {
-                ..$mocks
+            _root_.zio.ZLayer.fromServiceM { proxy =>
+              _root_.zio.ZIO.runtime { rts =>
+                new $serviceType {
+                  ..$mocks
+                }
               }
-            )
+            }
         }
       """
 

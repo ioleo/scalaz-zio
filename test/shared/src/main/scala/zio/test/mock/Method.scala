@@ -25,7 +25,7 @@ import zio.{ =!=, Has, Tagged, URLayer }
  * A `Model[R, I, A]` represents a capability of environment `R` that
  * takes an input `I` and returns an effect that may produce a single `A`.
  */
-abstract class Method[R <: Has[_]: Tagged, I, A] { self =>
+abstract class Method[R <: Has[_]: Tagged, I, E, A] { self =>
 
   def envBuilder: URLayer[Has[Proxy], R]
 
@@ -35,7 +35,7 @@ abstract class Method[R <: Has[_]: Tagged, I, A] { self =>
    * Available only for methods that do take arguments.
    */
   @silent("parameter value ev in method apply is never used")
-  def apply(assertion: Assertion[I])(implicit ev: I =!= Unit): ArgumentExpectation[R, I, A] =
+  def apply(assertion: Assertion[I])(implicit ev: I =!= Unit): ArgumentExpectation[R, I, E, A] =
     ArgumentExpectation(self, assertion)
 
   /**
@@ -44,7 +44,7 @@ abstract class Method[R <: Has[_]: Tagged, I, A] { self =>
    * Available only for methods that don't take arguments.
    */
   @silent("parameter value ev in method returns is never used")
-  def returns[E](returns: ReturnExpectation[I, E, A])(implicit ev: I <:< Unit): Expectation[R] =
+  def returns[E1 <: E](returns: ReturnExpectation[I, E, A])(implicit ev: I <:< Unit): Expectation[R] =
     Expectation.Call[R, I, E, A](self, Assertion.isUnit.asInstanceOf[Assertion[I]], returns.io)
 
   /**

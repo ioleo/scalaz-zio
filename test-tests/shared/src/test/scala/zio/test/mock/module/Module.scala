@@ -58,6 +58,8 @@ object Module {
       u: Int,
       v: Int
     ): IO[String, String]
+
+    def function(a: Int): String
   }
 
   val static                                     = ZIO.accessM[Module](_.get.static)
@@ -94,4 +96,6 @@ object Module {
     u: Int,
     v: Int
   ) = ZIO.accessM[Module](_.get.maxParams(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v))
+
+  def function(a: Int) = ZIO.access[Module](_.get.function(a))
 }

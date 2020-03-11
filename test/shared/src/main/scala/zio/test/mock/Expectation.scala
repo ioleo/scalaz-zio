@@ -181,8 +181,8 @@ object Expectation {
    * Models a call in environment `R` that takes input arguments `I` and returns an effect
    * that may fail with an error `E` or produce a single `A`.
    */
-  private[test] case class Call[R <: Has[_], I, +E, A](
-    method: Method[R, I, A],
+  private[test] case class Call[R <: Has[_], I, E, A](
+    method: Method[R, I, E, A],
     assertion: Assertion[I],
     returns: I => IO[E, A],
     satisfied: Boolean,
@@ -195,7 +195,7 @@ object Expectation {
   private[test] object Call {
 
     def apply[R <: Has[_], I, E, A](
-      method: Method[R, I, A],
+      method: Method[R, I, E, A],
       assertion: Assertion[I],
       returns: I => IO[E, A]
     ): Call[R, I, E, A] =

@@ -17,70 +17,75 @@
 package zio.test.mock.module
 
 import zio.test.mock.{ Method, Proxy }
-import zio.{ Has, IO, UIO, URLayer, ZLayer }
+import zio.{ Has, IO, UIO, URLayer, ZIO, ZLayer }
 
 /**
  * Example module used for testing ZIO Mock framework.
  */
 object ModuleMock {
 
-  sealed trait Tag[I, A] extends Method[Module, I, A] {
+  sealed trait tag[I, E, A] extends Method[Module, I, E, A] {
     def envBuilder: URLayer[Has[Proxy], Module] = ModuleMock.envBuilder
   }
 
-  case object Static               extends Tag[Unit, String]
-  case object ZeroParams           extends Tag[Unit, String]
-  case object ZeroParamsWithParens extends Tag[Unit, String]
-  case object SingleParam          extends Tag[Int, String]
-  case object ManyParams           extends Tag[(Int, String, Long), String]
-  case object ManyParamLists       extends Tag[(Int, String, Long), String]
-  case object Command              extends Tag[Int, Unit]
-  case object Looped               extends Tag[Int, Nothing]
+  case object Static               extends tag[Unit, String, String]
+  case object ZeroParams           extends tag[Unit, String, String]
+  case object ZeroParamsWithParens extends tag[Unit, String, String]
+  case object SingleParam          extends tag[Int, String, String]
+  case object ManyParams           extends tag[(Int, String, Long), String, String]
+  case object ManyParamLists       extends tag[(Int, String, Long), String, String]
+  case object Command              extends tag[Int, Unit, Unit]
+  case object Looped               extends tag[Int, Nothing, Nothing]
   object Overloaded {
-    case object _0 extends Tag[Int, String]
-    case object _1 extends Tag[Long, String]
+    case object _0 extends tag[Int, String, String]
+    case object _1 extends tag[Long, String, String]
   }
 
-  case object MaxParams extends Tag[T22[Int], String]
+  case object MaxParams            extends tag[T22[Int], String, String]
+  case object Function             extends tag[Int, Throwable, String]
 
   private[test] lazy val envBuilder: URLayer[Has[Proxy], Module] =
-    ZLayer.fromService(proxy =>
-      new Module.Service {
-        val static: IO[String, String]                                     = proxy(Static)
-        def zeroParams: IO[String, String]                                 = proxy(ZeroParams)
-        def zeroParamsWithParens(): IO[String, String]                     = proxy(ZeroParamsWithParens)
-        def singleParam(a: Int): IO[String, String]                        = proxy(SingleParam, a)
-        def manyParams(a: Int, b: String, c: Long): IO[String, String]     = proxy(ManyParams, (a, b, c))
-        def manyParamLists(a: Int)(b: String)(c: Long): IO[String, String] = proxy(ManyParamLists, a, b, c)
-        def command(a: Int): IO[Unit, Unit]                                = proxy(Command, a)
-        def looped(a: Int): UIO[Nothing]                                   = proxy(Looped, a)
-        def overloaded(n: Int): IO[String, String]                         = proxy(Overloaded._0, n)
-        def overloaded(n: Long): IO[String, String]                        = proxy(Overloaded._1, n)
-        def maxParams(
-          a: Int,
-          b: Int,
-          c: Int,
-          d: Int,
-          e: Int,
-          f: Int,
-          g: Int,
-          h: Int,
-          i: Int,
-          j: Int,
-          k: Int,
-          l: Int,
-          m: Int,
-          n: Int,
-          o: Int,
-          p: Int,
-          q: Int,
-          r: Int,
-          s: Int,
-          t: Int,
-          u: Int,
-          v: Int
-        ): IO[String, String] =
-          proxy(MaxParams, (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v))
+    ZLayer.fromServiceM { proxy =>
+      ZIO.runtime.map { rts =>
+        new Module.Service {
+          val static: IO[String, String]                                     = { println("called STATIC"); proxy(Static) }
+          def zeroParams: IO[String, String]                                 = { println("called ZERO PARAMS"); proxy(ZeroParams) }
+          def zeroParamsWithParens(): IO[String, String]                     = { println("called ZERO PARAMS WITH PARENS"); proxy(ZeroParamsWithParens) }
+          def singleParam(a: Int): IO[String, String]                        = { println("called SINGLE PARAM"); proxy(SingleParam, a) }
+          def manyParams(a: Int, b: String, c: Long): IO[String, String]     = { println("called MANY PARAMS"); proxy(ManyParams, (a, b, c)) }
+          def manyParamLists(a: Int)(b: String)(c: Long): IO[String, String] = { println("called MANY PARAM LISTS"); proxy(ManyParamLists, a, b, c) }
+          def command(a: Int): IO[Unit, Unit]                                = { println("called COMMAND"); proxy(Command, a) }
+          def looped(a: Int): UIO[Nothing]                                   = { println("called LOOPED"); proxy(Looped, a) }
+          def overloaded(n: Int): IO[String, String]                         = { println("called OVERLOADED _0"); proxy(Overloaded._0, n) }
+          def overloaded(n: Long): IO[String, String]                        = { println("called OVERLOADED _1"); proxy(Overloaded._1, n) }
+          def maxParams(
+            a: Int,
+            b: Int,
+            c: Int,
+            d: Int,
+            e: Int,
+            f: Int,
+            g: Int,
+            h: Int,
+            i: Int,
+            j: Int,
+            k: Int,
+            l: Int,
+            m: Int,
+            n: Int,
+            o: Int,
+            p: Int,
+            q: Int,
+            r: Int,
+            s: Int,
+            t: Int,
+            u: Int,
+            v: Int
+          ): IO[String, String] =
+            { println("called MAX PARAMS"); proxy(MaxParams, (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v)) }
+
+          def function(a: Int): String = { println("called FUNCTION"); rts.unsafeRunTask(proxy(Function, a)) }
+        }
       }
-    )
+    }
 }

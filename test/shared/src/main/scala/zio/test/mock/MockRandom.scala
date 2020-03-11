@@ -21,26 +21,26 @@ import zio.{ Chunk, Has, UIO, URLayer, ZLayer }
 
 object MockRandom {
 
-  sealed trait Tag[I, A] extends Method[Random, I, A] {
+  sealed trait Tag[I, E, A] extends Method[Random, I, E, A] {
     def envBuilder = MockRandom.envBuilder
   }
 
-  object NextBoolean  extends Tag[Unit, Boolean]
-  object NextBytes    extends Tag[Int, Chunk[Byte]]
-  object NextDouble   extends Tag[Unit, Double]
-  object NextFloat    extends Tag[Unit, Float]
-  object NextGaussian extends Tag[Unit, Double]
+  object NextBoolean  extends Tag[Unit, Nothing, Boolean]
+  object NextBytes    extends Tag[Int, Nothing, Chunk[Byte]]
+  object NextDouble   extends Tag[Unit, Nothing, Double]
+  object NextFloat    extends Tag[Unit, Nothing, Float]
+  object NextGaussian extends Tag[Unit, Nothing, Double]
   object NextInt {
-    object _0 extends Tag[Int, Int]
-    object _1 extends Tag[Unit, Int]
+    object _0 extends Tag[Int, Nothing, Int]
+    object _1 extends Tag[Unit, Nothing, Int]
   }
   object NextLong {
-    object _0 extends Tag[Unit, Long]
-    object _1 extends Tag[Long, Long]
+    object _0 extends Tag[Unit, Nothing, Long]
+    object _1 extends Tag[Long, Nothing, Long]
   }
-  object NextPrintableChar extends Tag[Unit, Char]
-  object NextString        extends Tag[Int, String]
-  object Shuffle           extends Tag[List[Any], List[Any]]
+  object NextPrintableChar extends Tag[Unit, Nothing, Char]
+  object NextString        extends Tag[Int, Nothing, String]
+  object Shuffle           extends Tag[List[Any], Nothing, List[Any]]
 
   private lazy val envBuilder: URLayer[Has[Proxy], Random] =
     ZLayer.fromService(invoke =>
