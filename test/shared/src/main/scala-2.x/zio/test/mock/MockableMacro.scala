@@ -37,52 +37,51 @@ private[mock] object MockableMacro {
       case _            => abort("Moclable macro should only be applied to objects.")
     }
 
-    val serviceType: Type = c.typeCheck(q"(??? : ${c.prefix.tree})").tpe.typeArgs.head
-    val envType: Type     = c.typeCheck(q"(??? : _root_.zio.Has[$serviceType])").tpe
+    val serviceType: Type   = c.typeCheck(q"(??? : ${c.prefix.tree})").tpe.typeArgs.head
+    val envType: Type       = c.typeCheck(q"(??? : _root_.zio.Has[$serviceType])").tpe
+    val anyType: Type       = c.typeCheck(q"(??? : _root_.scala.Any)").tpe
+    val throwableType: Type = c.typeCheck(q"(??? : _root_.java.lang.Throwable)").tpe
 
-    object zio {
-
-      def unapply(tpe: Type): Option[(Type, Type, Type)] =
-        tpe.typeArgs match {
-          case r :: e :: a :: Nil if tpe.typeSymbol.fullName == "zio.ZIO" => Some((r, e, a))
-          case _                                                          => None
-        }
-    }
+    def unpackType(tpe: Type): (Boolean, Type, Type, Type) =
+      tpe.typeArgs match {
+        case r :: e :: a :: Nil if tpe.typeSymbol.fullName == "zio.ZIO" => (true, r, e, a)
+        case _                                                        => (false, anyType, throwableType, tpe)
+      }
 
     def capitalize(name: TermName): TermName = TermName(name.toString.capitalize)
 
     def makeTag(name: TermName, symbol: MethodSymbol): Tree = {
+      val (isZio, _, e, a) = unpackType(symbol.returnType)
       val tagName = capitalize(name)
-      val inputType =
-        if (symbol.isVal || symbol.isVar) tq"Unit"
+      val i =
+        if (symbol.isVar) abort(s"Unable to generate tag for variable $name. Variables are not supported.")
+        else if (symbol.isVal && !isZio) abort(s"Unable to generate tag for value $name. Non-ZIO values are not supported.")
+        else if (symbol.isVal) tq"Unit"
         else {
           val typeList = symbol.paramLists.flatten.map(_.typeSignature)
           if (typeList.size > 22) abort(s"Unable to generate tag for method $name with more than 22 arguments.")
           tq"(..$typeList)"
         }
-      val (errorType: Type, successType: Type) = symbol.returnType match {
-        case zio(_, e, a) => e -> a
-        case a            => tq"Throwable" -> a
-      }
 
-      q"case object $tagName extends tag[$inputType, $errorType, $successType]"
+      q"case object $tagName extends tag[$i, $e, $a]"
     }
 
     def makeMock(name: TermName, symbol: MethodSymbol, overloadIndex: Option[TermName]): Tree = {
+      val (isZio, r, e, a) = unpackType(symbol.returnType)
       val tagName = capitalize(name)
-      val (isZio, r: Type, e: Type, a: Type) = symbol.returnType match {
-        case zio(r, e, a) => (true, r, e, a)
-        case a            => (false, tq"Any", tq"Throwable", a)
-      }
-
       val tag = overloadIndex match {
         case Some(index) => q"$mockName.$tagName.$index"
         case None        => q"$mockName.$tagName"
       }
 
-      val mods =
-        if (symbol.isAbstract) Modifiers(Flag.FINAL)
-        else Modifiers(Flag.FINAL | Flag.OVERRIDE)
+      val mods = Modifiers(
+        Seq(
+          Option(Flag.OVERRIDE).filter(_ => !symbol.isAbstract),
+          Option(Flag.LAZY).filter(_ => !isZio && symbol.isVal)
+        ).foldLeft(Flag.FINAL) {
+          case (acc, Some(flag)) => acc | flag
+        }
+      )
 
       val returnType = tq"_root_.zio.ZIO[$r, $e, $a]"
       val returnValue = {
@@ -95,10 +94,10 @@ private[mock] object MockableMacro {
         }
 
         if (isZio) proxy
-        else "rts.unsafeRunTask($proxy)"
+        else q"rts.unsafeRunTask($proxy)"
       }
 
-      if (symbol.isVal || symbol.isVar) q"$mods val $name: $returnType = $returnValue"
+      if (symbol.isVal) q"$mods val $name: $returnType = $returnValue"
       else
         symbol.paramLists match {
           case Nil       => q"$mods def $name: $returnType = $returnValue"

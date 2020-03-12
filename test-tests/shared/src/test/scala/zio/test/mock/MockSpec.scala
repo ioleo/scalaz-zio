@@ -14,7 +14,7 @@ object MockSpec extends ZIOBaseSpec with MockSpecUtils {
   import MockException._
 
   def spec = suite("MockSpec")(
-    suite("methods")(
+    suite("methods")(/*
       suite("static")(
         testSpec("returns value")(
           ModuleMock.Static returns value("foo"),
@@ -26,7 +26,7 @@ object MockSpec extends ZIOBaseSpec with MockSpecUtils {
           Module.static.flip,
           equalTo("foo")
         )
-      ),
+      ),*/
       suite("zeroParams")(
         testSpec("returns value")(
           ModuleMock.ZeroParams returns value("foo"),
@@ -258,19 +258,44 @@ object MockSpec extends ZIOBaseSpec with MockSpecUtils {
           Module.looped(1),
           isNone
         )
-      )/*,
-      suite("constant")(
+      ),
+      suite("function")(
         testSpec("returns value")(
-          ModuleMock.Constant returns value("foo"),
-          Module.constant,
+          ModuleMock.Function(equalTo(1)) returns value("foo"),
+          Module.function(1),
           equalTo("foo")
         ),
+        testSpec("returns valueF")(
+          ModuleMock.Function(equalTo(1)) returns valueF(i => s"foo $i"),
+          Module.function(1),
+          equalTo("foo 1")
+        ),
+        testSpec("returns valueM")(
+          ModuleMock.Function(equalTo(1)) returns valueM(i => UIO.succeedNow(s"foo $i")),
+          Module.function(1),
+          equalTo("foo 1")
+        ),
         testSpecDied("returns failure")(
-          ModuleMock.Constant returns failure(new Exception("foo")),
-          Module.constant,
+          ModuleMock.Function(equalTo(1)) returns failure(new Exception("foo")),
+          Module.function(1),
+          isSubtype[Exception](hasMessage(equalTo("foo")))
+        ),
+        testSpecDied("returns failureF")(
+          ModuleMock.Function(equalTo(1)) returns failureF(i => new Exception(s"foo $i")),
+          Module.function(1),
+          isSubtype[Exception](hasMessage(equalTo("foo 1")))
+        ),
+        testSpecDied("returns failureM")(
+          ModuleMock.Function(equalTo(1)) returns failureM(i => IO.fail(new Exception(s"foo $i"))),
+          Module.function(1),
+          isSubtype[Exception](hasMessage(equalTo("foo 1")))
+        ),
+        testSpec("failure of collaborator can be caught")(
+          ModuleMock.Function(equalTo(1)) returns failure(new Exception("foo")),
+          (zio.ZIO.unit as (Module.function(1))).flip,
           isSubtype[Exception](hasMessage(equalTo("foo")))
         )
-      )*/
+      )
     ),
     suite("assertions composition")(
       testSpec("&&")(

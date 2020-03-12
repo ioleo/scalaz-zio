@@ -24,7 +24,7 @@ import zio.{ IO, ZIO }
 object Module {
 
   trait Service {
-    val static: IO[String, String]
+    //val static: IO[String, String]
     def zeroParams: IO[String, String]
     def zeroParamsWithParens(): IO[String, String]
     def singleParam(a: Int): IO[String, String]
@@ -62,7 +62,7 @@ object Module {
     def function(a: Int): String
   }
 
-  val static                                     = ZIO.accessM[Module](_.get.static)
+  //val static                                     = ZIO.accessM[Module](_.get.static)
   def zeroParams                                 = ZIO.accessM[Module](_.get.zeroParams)
   def zeroParamsWithParens()                     = ZIO.accessM[Module](_.get.zeroParamsWithParens())
   def singleParam(a: Int)                        = ZIO.accessM[Module](_.get.singleParam(a))

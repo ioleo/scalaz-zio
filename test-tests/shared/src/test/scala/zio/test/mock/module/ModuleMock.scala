@@ -48,16 +48,16 @@ object ModuleMock {
     ZLayer.fromServiceM { proxy =>
       ZIO.runtime.map { rts =>
         new Module.Service {
-          val static: IO[String, String]                                     = { println("called STATIC"); proxy(Static) }
-          def zeroParams: IO[String, String]                                 = { println("called ZERO PARAMS"); proxy(ZeroParams) }
-          def zeroParamsWithParens(): IO[String, String]                     = { println("called ZERO PARAMS WITH PARENS"); proxy(ZeroParamsWithParens) }
-          def singleParam(a: Int): IO[String, String]                        = { println("called SINGLE PARAM"); proxy(SingleParam, a) }
-          def manyParams(a: Int, b: String, c: Long): IO[String, String]     = { println("called MANY PARAMS"); proxy(ManyParams, (a, b, c)) }
-          def manyParamLists(a: Int)(b: String)(c: Long): IO[String, String] = { println("called MANY PARAM LISTS"); proxy(ManyParamLists, a, b, c) }
-          def command(a: Int): IO[Unit, Unit]                                = { println("called COMMAND"); proxy(Command, a) }
-          def looped(a: Int): UIO[Nothing]                                   = { println("called LOOPED"); proxy(Looped, a) }
-          def overloaded(n: Int): IO[String, String]                         = { println("called OVERLOADED _0"); proxy(Overloaded._0, n) }
-          def overloaded(n: Long): IO[String, String]                        = { println("called OVERLOADED _1"); proxy(Overloaded._1, n) }
+          //val static: IO[String, String]                                     = { println("static!"); proxy(Static) }
+          def zeroParams: IO[String, String]                                 = proxy(ZeroParams)
+          def zeroParamsWithParens(): IO[String, String]                     = proxy(ZeroParamsWithParens)
+          def singleParam(a: Int): IO[String, String]                        = proxy(SingleParam, a)
+          def manyParams(a: Int, b: String, c: Long): IO[String, String]     = proxy(ManyParams, (a, b, c))
+          def manyParamLists(a: Int)(b: String)(c: Long): IO[String, String] = proxy(ManyParamLists, a, b, c)
+          def command(a: Int): IO[Unit, Unit]                                = proxy(Command, a)
+          def looped(a: Int): UIO[Nothing]                                   = proxy(Looped, a)
+          def overloaded(n: Int): IO[String, String]                         = proxy(Overloaded._0, n)
+          def overloaded(n: Long): IO[String, String]                        = proxy(Overloaded._1, n)
           def maxParams(
             a: Int,
             b: Int,
@@ -81,10 +81,9 @@ object ModuleMock {
             t: Int,
             u: Int,
             v: Int
-          ): IO[String, String] =
-            { println("called MAX PARAMS"); proxy(MaxParams, (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v)) }
+          ): IO[String, String] = proxy(MaxParams, (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v))
 
-          def function(a: Int): String = { println("called FUNCTION"); rts.unsafeRunTask(proxy(Function, a)) }
+          def function(a: Int): String = { println("CALLED function!"); rts.unsafeRunTask(proxy(Function, a)) }
         }
       }
     }

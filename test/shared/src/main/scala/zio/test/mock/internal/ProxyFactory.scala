@@ -31,9 +31,12 @@ object ProxyFactory {
    */
   def mockProxy[R <: Has[_]: Tagged](state: State[R]): ULayer[Has[Proxy]] =
     ZLayer.succeed(new Proxy {
-      def invoke[RIn <: Has[_], ROut, I, E, A](invokedMethod: Method[RIn, I, E, A], args: I): ZIO[ROut, E, A] = {
+        println(s"created PROXY")
 
-        def findMatching(scopes: List[Scope[R]]): UIO[Matched[R, E, A]] = {
+      def invoke[RIn <: Has[_], ROut, I, E, A](invokedMethod: Method[RIn, I, E, A], args: I): ZIO[ROut, E, A] = {
+        println(s"INVOKED $invokedMethod")
+
+        def findMatching(scopes: List[Scope[R]]): UIO[Matched[R, E, A]] =
           scopes match {
             case Nil => ZIO.die(UnexpectedCallExpection(invokedMethod, args))
             case Scope(expectation, id, update) :: nextScopes =>
@@ -180,7 +183,7 @@ object ProxyFactory {
                   findMatching(scope :: nextScopes)
               }
           }
-        }
+
         def handleLeafFailure(failure: => InvalidCall, nextScopes: List[Scope[R]]): UIO[Matched[R, E, A]] =
           state.failedMatchesRef
             .updateAndGet(failure :: _)
@@ -224,17 +227,18 @@ object ProxyFactory {
           }
 
         for {
-          promise <- Promise.make[E, A]
+          promise <- Promise.make[Nothing, Either[E, A]]
           id      <- state.callsCountRef.updateAndGet(_ + 1)
           _       <- state.failedMatchesRef.set(List.empty)
           _ <- state.expectationRef.update { root =>
                 val rootScope = Scope[R](root, id, identity)
                 findMatching(rootScope :: Nil).flatMap {
                   case Matched(expectation, result) =>
-                    promise.complete(result) as (expectation)
+                    println(s"Got ${result.either}")
+                    promise.complete(result.either) as (expectation)
                 }
               }
-          output <- promise.await
+          output <- promise.await.absolve
         } yield output
       }
     })
